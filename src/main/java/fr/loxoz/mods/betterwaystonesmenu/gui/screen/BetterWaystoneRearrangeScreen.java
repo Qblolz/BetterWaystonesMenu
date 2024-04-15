@@ -1,17 +1,16 @@
 package fr.loxoz.mods.betterwaystonesmenu.gui.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import fr.loxoz.mods.betterwaystonesmenu.compat.CText;
 import fr.loxoz.mods.betterwaystonesmenu.compat.widget.TexturedButtonTooltipWidget;
 import fr.loxoz.mods.betterwaystonesmenu.compat.widget.WidgetCompat;
 import fr.loxoz.mods.betterwaystonesmenu.gui.widget.BetterRemoveWaystoneButton;
 import fr.loxoz.mods.betterwaystonesmenu.gui.widget.BetterTextFieldWidget;
 import fr.loxoz.mods.betterwaystonesmenu.gui.widget.ScrollableContainerWidget;
-import fr.loxoz.mods.betterwaystonesmenu.util.query.IQueryMatcher;
-import fr.loxoz.mods.betterwaystonesmenu.util.query.PartsQueryMatcher;
 import fr.loxoz.mods.betterwaystonesmenu.util.Utils;
 import fr.loxoz.mods.betterwaystonesmenu.util.WaystoneUtils;
+import fr.loxoz.mods.betterwaystonesmenu.util.query.IQueryMatcher;
+import fr.loxoz.mods.betterwaystonesmenu.util.query.PartsQueryMatcher;
 import net.blay09.mods.balm.api.Balm;
 import net.blay09.mods.waystones.api.IWaystone;
 import net.blay09.mods.waystones.core.PlayerWaystoneManager;
@@ -20,6 +19,9 @@ import net.blay09.mods.waystones.network.message.RemoveWaystoneMessage;
 import net.blay09.mods.waystones.network.message.SortWaystoneMessage;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ComponentPath;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.sounds.SoundManager;
@@ -29,6 +31,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -105,6 +108,15 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         updateList();
     }
 
+    private static boolean changeFocus(AbstractWidget widget, boolean set) {
+        if (!widget.active || !widget.visible) {
+            return false;
+        }
+
+        widget.setFocused(!widget.isFocused());
+        return widget.isFocused();
+    }
+
     public void updateList() {
         IWaystone prevFocusedWaystone = null;
         if (scrollable.getFocused() instanceof DraggableButton btn) {
@@ -129,7 +141,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             var btn = new DraggableButton(0, y, btn_w, btn_h, msg, i, waystone);
             scrollable.contents().add(btn);
 
-            if (Objects.equals(prevFocusedWaystone, waystone) && btn.changeFocus(true)) {
+            if (Objects.equals(prevFocusedWaystone, waystone) && changeFocus(btn, true)) {
                 scrollable.setFocused(btn);
                 scrollable.scrollElementIntoView(btn);
             }
@@ -149,7 +161,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             dropZones.add(new DropZone(y, y + btn_h, i));
 
             y += 20 + BTN_GAP;
-            int ch = btn.y + btn.getHeight();
+            int ch = btn.getY() + btn.getHeight();
             if (ch > content_h) content_h = ch;
         }
 
@@ -183,10 +195,10 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         if (super.mouseClicked(mouseX, mouseY, button)) {
             if (scrollable.getFocused() instanceof DraggableButton btn) {
                 if (prevFocused != null && prevFocused != btn) {
-                    prevFocused.changeFocus(true);
+                    changeFocus(prevFocused, true);
                 }
                 if (!btn.isFocused()) {
-                    btn.changeFocus(true);
+                    changeFocus(btn, true);
                 }
             }
             return true;
@@ -195,8 +207,8 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     }
 
     @Override
-    public void render(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
-        renderBackground(matrices);
+    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+        renderBackground(graphics);
         // move the draggable button if dragged + scroll when reaching top or bottom
         // scrollEndsSize represents the auto scroll padding size when reaching top or bottom of scrollable area while dragging
         int scrollEndsSize = 20;
@@ -213,18 +225,18 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             draggedButton.setPosition(mouseX - dragContext.getOffsetX(), mouseY - dragContext.getOffsetY());
         }
         // version info
-        drawVersionInfo(matrices);
+        drawVersionInfo(graphics);
         // bottom text info
         {
             var lines = font.split(CText.translatable("gui.betterwaystonesmenu.waystone_selection.drag_info"), (imageWidth * 2));
             int y = scrollable.getY() + scrollable.getHeight() + UI_GAP;
             for (var line : lines) {
-                drawCenteredString(matrices, font, line, width/2, y, 0x66ffffff);
+                graphics.drawCenteredString(font, line, width/2, y, 0x66ffffff);
                 y += font.lineHeight +  2;
             }
         }
         // widgets and labels
-        super.render(matrices, mouseX, mouseY, partialTicks);
+        super.render(graphics, mouseX, mouseY, partialTicks);
         // render top and bottom ends' auto scroll gradients
         if (isDraggingWaystone()) {
             int x1 = scrollable.getX();
@@ -232,11 +244,11 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             int clrEnd = 0x1affffff;
             int clrMid = 0x00ffffff;
             if (scrollable.getScrollY() > 0.1) {
-                fillGradient(matrices, x1, scrollable.getY(), x2, scrollable.getY() + scrollEndsSize, clrEnd, clrMid);
+                graphics.fillGradient(x1, scrollable.getY(), x2, scrollable.getY() + scrollEndsSize, clrEnd, clrMid);
             }
             if (scrollable.getScrollY() < (scrollable.getMaxScrollY() - 0.1)) {
                 int y = scrollable.getY() + scrollable.getHeight() - scrollEndsSize;
-                fillGradient(matrices, x1, y, x2, y + scrollEndsSize, clrMid, clrEnd);
+                graphics.fillGradient(x1, y, x2, y + scrollEndsSize, clrMid, clrEnd);
             }
         }
         // render dragged button and hovered dropZone
@@ -244,27 +256,27 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             var hoveredZone = dragContext.getHoveredDropZone(mouseX, mouseY);
             if (hoveredZone != null && hoveredZone.idx != dragContext.getIndex()) {
                 int outlineY = scrollable.getY() - (int) scrollable.getScrollY();
-                Utils.drawOutline(matrices, scrollable.getX(), outlineY + hoveredZone.yStart(), scrollable.getX() + scrollable.getInnerWidth() - BTN_GAP, outlineY + hoveredZone.yEnd(), 0x99ffffff);
+                Utils.drawOutline(graphics, scrollable.getX(), outlineY + hoveredZone.yStart(), scrollable.getX() + scrollable.getInnerWidth() - BTN_GAP, outlineY + hoveredZone.yEnd(), 0x99ffffff);
             }
 
-            matrices.pushPose();
-            matrices.translate(0, 0, 500);
-            draggedButton.render(matrices, mouseX, mouseY, partialTicks);
-            matrices.popPose();
+            graphics.pose().pushPose();
+            graphics.pose().translate(0, 0, 500);
+            draggedButton.render(graphics, mouseX, mouseY, partialTicks);
+            graphics.pose().popPose();
         }
         // container slot's tooltip (unused for this menu)
-        renderTooltip(matrices, mouseX, mouseY);
+        renderTooltip(graphics, mouseX, mouseY);
         // tooltips
-        renderChildrenTooltip(matrices, mouseX, mouseY);
+        renderChildrenTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
-    protected void renderLabels(@NotNull PoseStack matrices, int mouseX, int mouseY) {
+    protected void renderLabels(@NotNull GuiGraphics graphics, int mouseX, int mouseY) {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        matrices.pushPose();
-        matrices.translate(-leftPos, -topPos, 0);
-        drawCenteredString(matrices, font, getTitle().copy().withStyle(style -> style.withColor(ChatFormatting.GRAY)), width/2, topPos - font.lineHeight - UI_GAP, 0xffffff);
-        matrices.popPose();
+        graphics.pose().pushPose();
+        graphics.pose().translate(-leftPos, -topPos, 0);
+        graphics.drawCenteredString(font, getTitle().copy().withStyle(style -> style.withColor(ChatFormatting.GRAY)), width/2, topPos - font.lineHeight - UI_GAP, 0xffffff);
+        graphics.pose().popPose();
     }
 
     @Override
@@ -315,7 +327,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     }
 
     public void onDragStart(DraggableButton button, double mouseX, double mouseY) {
-        dragContext = new DragContext(button.index, (int) mouseX - button.x, (int) mouseY - button.y);
+        dragContext = new DragContext(button.index, (int) mouseX - button.getX(), (int) mouseY - button.getY());
         draggedButton.setMessage(button.getMessage());
     }
 
@@ -326,7 +338,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         private final int index;
 
         public DraggableButton(int x, int y, int width, int height, Component message, int index, IWaystone waystone) {
-            super(x, y, width, height, message, $ -> {});
+            super(x, y, width, height, message, $ -> {}, $ -> message.copy());
             this.waystone = waystone;
             this.index = index;
         }
@@ -335,7 +347,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         public int getIndex() { return index; }
 
         public boolean isMouseInside(double mouseX, double mouseY) {
-            return mouseX >= (double) x && mouseY >= (double) y && mouseX < (double) (x + getWidth()) && mouseY < (double) (y + getHeight());
+            return mouseX >= (double) getX() && mouseY >= (double) getY() && mouseX < (double) (getX() + getWidth()) && mouseY < (double) (getY() + getHeight());
         }
 
         @Override
@@ -361,51 +373,73 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         @Override
         public void playDownSound(@NotNull SoundManager p_93665_) {}
 
+        /*
         @Override
         protected int getYImage(boolean focused) {
             return 0;
-        }
+        }*/
 
         @Override
-        public void renderButton(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
             if (dragContext != null && dragContext.index == index) return;
-            matrices.pushPose();
+            graphics.pose().pushPose();
             float prevAlpha = -1;
-            if (!queryMatcher.isBlank() && !queryMatcher.match(getMessage().getContents())) { // `getContents()` is faster than `getString()`
+            if (!queryMatcher.isBlank() && !queryMatcher.match(getMessage().getString())) { // `getContents()` is faster than `getString()`
                 prevAlpha = alpha;
                 alpha *= 0.5;
             }
-            super.renderButton(matrices, mouseX, mouseY, partialTicks);
+            super.renderWidget(graphics, mouseX, mouseY, partialTicks);
             if (prevAlpha >= 0) {
                 alpha = prevAlpha;
             }
-            matrices.popPose();
+            graphics.pose().popPose();
             if (isFocused()) {
-                Utils.drawOutline(matrices, x, y, x + width, y + height, 0x66ffffff);
+                Utils.drawOutline(graphics, getX(), getY(), getX() + width, getY() + height, 0x66ffffff);
             }
         }
     }
 
     public static class DraggedButton extends Button implements WidgetCompat {
         public DraggedButton(int x, int y, int width, int height) {
-            super(x, y, width, height, CText.empty(), $ -> {});
+            super(x, y, width, height, CText.empty(), $ -> {}, $ -> CText.empty());
             active = false;
         }
 
         @Override
-        public int getX() { return x; }
-        @Override
-        public void setX(int x) { this.x = x; }
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+            graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0x997f7f7f);
+            super.renderWidget(graphics, mouseX, mouseY, partialTicks);
+        }
 
         @Override
-        public int getY() { return y; }
-        @Override
-        public void setY(int y) { this.y = y; }
+        public void mouseMoved(double p_94758_, double p_94759_) {
+            super.mouseMoved(p_94758_, p_94759_);
+        }
 
         @Override
-        public void renderButton(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
-            fill(matrices, getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0x997f7f7f);
-            super.renderButton(matrices, mouseX, mouseY, partialTicks);
+        public boolean mouseScrolled(double p_94734_, double p_94735_, double p_94736_) {
+            return super.mouseScrolled(p_94734_, p_94735_, p_94736_);
+        }
+
+        @Override
+        public boolean keyReleased(int p_94750_, int p_94751_, int p_94752_) {
+            return super.keyReleased(p_94750_, p_94751_, p_94752_);
+        }
+
+        @Override
+        public boolean charTyped(char p_94732_, int p_94733_) {
+            return super.charTyped(p_94732_, p_94733_);
+        }
+
+        @Nullable
+        @Override
+        public ComponentPath getCurrentFocusPath() {
+            return super.getCurrentFocusPath();
+        }
+
+        @Override
+        public void setPosition(int p_265617_, int p_265577_) {
+            super.setPosition(p_265617_, p_265577_);
         }
     }
 

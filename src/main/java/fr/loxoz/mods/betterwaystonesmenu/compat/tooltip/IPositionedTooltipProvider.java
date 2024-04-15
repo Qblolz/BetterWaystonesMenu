@@ -19,6 +19,6 @@ public interface IPositionedTooltipProvider extends ITooltipProvider {
     }
 
     static TooltipPos getFromWidget(AbstractWidget widget, TooltipOffset offset) {
-        return new TooltipPos(widget.x + offset.x(), widget.y + offset.y());
+        return new TooltipPos(widget.getX() + offset.x(), widget.getY() + offset.y());
     }
 }

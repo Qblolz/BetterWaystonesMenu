@@ -1,7 +1,6 @@
 package fr.loxoz.mods.betterwaystonesmenu.gui.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import fr.loxoz.mods.betterwaystonesmenu.compat.CText;
 import fr.loxoz.mods.betterwaystonesmenu.compat.widget.TexturedButtonTooltipWidget;
 import fr.loxoz.mods.betterwaystonesmenu.config.BWMSortMode;
@@ -9,9 +8,9 @@ import fr.loxoz.mods.betterwaystonesmenu.gui.widget.BetterTextFieldWidget;
 import fr.loxoz.mods.betterwaystonesmenu.gui.widget.BetterWaystoneButton;
 import fr.loxoz.mods.betterwaystonesmenu.gui.widget.ScrollableContainerWidget;
 import fr.loxoz.mods.betterwaystonesmenu.gui.widget.TexturedEnumButtonWidget;
+import fr.loxoz.mods.betterwaystonesmenu.util.WaystoneUtils;
 import fr.loxoz.mods.betterwaystonesmenu.util.query.IQueryMatcher;
 import fr.loxoz.mods.betterwaystonesmenu.util.query.PartsQueryMatcher;
-import fr.loxoz.mods.betterwaystonesmenu.util.WaystoneUtils;
 import net.blay09.mods.balm.api.Balm;
 import net.blay09.mods.waystones.api.IWaystone;
 import net.blay09.mods.waystones.core.PlayerWaystoneManager;
@@ -21,6 +20,7 @@ import net.blay09.mods.waystones.network.message.RequestEditWaystoneMessage;
 import net.blay09.mods.waystones.network.message.SelectWaystoneMessage;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -271,7 +271,7 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
             var btn = createWaystoneButton(y, waystone);
             scrollable.contents().add(btn);
             y += 20 + BTN_GAP;
-            int ch = btn.y + btn.getHeight();
+            int ch = btn.getY() + btn.getHeight();
             if (ch > content_h) content_h = ch;
         }
 
@@ -331,8 +331,8 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
     }
 
     @Override
-    public void render(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
-        renderBackground(matrices);
+    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+        renderBackground(graphics);
         // heading bg + icon
         if (shouldShownHeading()) {
             IWaystone fromWaystone = menu.getWaystoneFrom();
@@ -341,16 +341,15 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
             int hx1 = area_heading.getX() + (!iconHeading ? 0 : (area_heading.getWidth() - 16) / 2 -1);
             int hx2 = !iconHeading ? (area_heading.getX() + area_heading.getWidth()) : (hx1 + 18);
 
-            fill(matrices, hx1, area_heading.getY(), hx2, area_heading.getY() + area_heading.getHeight(), 0x66000000);
+            graphics.fill(hx1, area_heading.getY(), hx2, area_heading.getY() + area_heading.getHeight(), 0x66000000);
 
             if (!iconHeading) {
-                drawCenteredString(matrices, font, heading_title, area_heading.getX() + area_heading.getWidth()/2, area_heading.getY() + area_heading.getHeight()/2 - font.lineHeight/2, 0xffffff);
+                graphics.drawCenteredString(font, heading_title, area_heading.getX() + area_heading.getWidth()/2, area_heading.getY() + area_heading.getHeight()/2 - font.lineHeight/2, 0xffffff);
                 // icon
-                RenderSystem.setShaderTexture(0, MENU_TEXTURE);
                 RenderSystem.enableBlend();
                 int u = 0;
                 if (fromWaystone.getWaystoneType().equals(WaystoneTypes.WAYSTONE)) u = 16;
-                blit(matrices, area_heading.getX() + 1, area_heading.getY() + 1, u, 76, 16, 16);
+                graphics.blit(MENU_TEXTURE, area_heading.getX() + 1, area_heading.getY() + 1, u, 76, 16, 16);
                 RenderSystem.disableBlend();
             }
             else {
@@ -366,41 +365,39 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
                 }
 
                 if (item != null) {
-                    itemRenderer.blitOffset = 100.0f;
-                    itemRenderer.renderAndDecorateItem(new ItemStack(item), area_heading.getX() + area_heading.getWidth()/2 - 8, area_heading.getY() + area_heading.getHeight()/2 - 8);
-                    itemRenderer.blitOffset = 0f;
+                    graphics.renderItem(new ItemStack(item), area_heading.getX() + area_heading.getWidth()/2 - 8, area_heading.getY() + area_heading.getHeight()/2 - 8, 0, 100);
                 }
             }
         }
         // version info
-        drawVersionInfo(matrices);
+        drawVersionInfo(graphics);
 
         // results count
-        drawCenteredString(matrices, font, CText.translatable("gui.betterwaystonesmenu.waystone_selection.showing", visibleWaystones.size(), waystones.size()), width/2, scrollable.getY() + scrollable.getHeight() + UI_GAP, 0xff737373);
+        graphics.drawCenteredString(font, CText.translatable("gui.betterwaystonesmenu.waystone_selection.showing", visibleWaystones.size(), waystones.size()), width/2, scrollable.getY() + scrollable.getHeight() + UI_GAP, 0xff737373);
 
         // if no waystones or results message
         if (visibleWaystones.size() == 0) {
             var message = queryMatcher.isBlank() ?
                     CText.translatable("gui.waystones.waystone_selection.no_waystones_activated").withStyle(style -> style.withColor(ChatFormatting.RED)) :
                     CText.translatable("gui.betterwaystonesmenu.waystone_selection.no_results").withStyle(style -> style.withColor(ChatFormatting.GRAY));
-            drawCenteredString(matrices, font, message, scrollable.getX() + scrollable.getWidth()/2, (scrollable.getY() + scrollable.getHeight()/2) - (font.lineHeight/2), 0xffffff);
+            graphics.drawCenteredString(font, message, scrollable.getX() + scrollable.getWidth()/2, (scrollable.getY() + scrollable.getHeight()/2) - (font.lineHeight/2), 0xffffff);
         }
-        matrices.popPose();
+        graphics.pose().popPose();
         // widgets and labels
-        super.render(matrices, mouseX, mouseY, partialTicks);
+        super.render(graphics, mouseX, mouseY, partialTicks);
         // container slot's tooltip (unused for this menu)
-        renderTooltip(matrices, mouseX, mouseY);
+        renderTooltip(graphics, mouseX, mouseY);
         // tooltips
-        renderChildrenTooltip(matrices, mouseX, mouseY);
+        renderChildrenTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
-    protected void renderLabels(@NotNull PoseStack matrices, int mouseX, int mouseY) {
+    protected void renderLabels(@NotNull GuiGraphics graphics, int mouseX, int mouseY) {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        matrices.pushPose();
-        matrices.translate(-leftPos, -topPos, 0);
-        drawCenteredString(matrices, font, getTitle().copy().withStyle(style -> style.withColor(ChatFormatting.GRAY)), area_title.getX() + area_title.getWidth()/2, area_title.getY(), 0xffffff);
-        matrices.popPose();
+        graphics.pose().pushPose();
+        graphics.pose().translate(-leftPos, -topPos, 0);
+        graphics.drawCenteredString(font, getTitle().copy().withStyle(style -> style.withColor(ChatFormatting.GRAY)), area_title.getX() + area_title.getWidth()/2, area_title.getY(), 0xffffff);
+        graphics.pose().popPose();
     }
 
     protected boolean allowSorting() { return true; }
@@ -417,14 +414,14 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         }
 
         @Override
-        public void renderButton(@NotNull PoseStack matrices, int mouseX, int mouseY, float delta) {
-            super.renderButton(matrices, mouseX, mouseY, delta);
-            if (!active) fill(matrices, x, y, x + getWidth(), y + getHeight(), 0xcc141414);
+        public void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+            super.renderWidget(graphics, mouseX, mouseY, delta);
+            if (!active) graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xcc141414);
         }
 
         @Override
-        public List<Component> getTooltip() {
-            var list = new ArrayList<>(super.getTooltip());
+        public List<Component> getTooltipComponents() {
+            var list = new ArrayList<>(super.getTooltipComponents());
             if (!active) list.add(CText.translatable("gui.betterwaystonesmenu.waystone_selection.config_requires_configured"));
             return Collections.unmodifiableList(list);
         }

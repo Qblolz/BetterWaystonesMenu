@@ -53,7 +53,7 @@ public class BetterWaystoneButton extends WaystoneButton implements IPositionedT
     }
 
     @Override
-    public List<Component> getTooltip() {
+    public List<Component> getTooltipComponents() {
         return tooltip;
     }
 

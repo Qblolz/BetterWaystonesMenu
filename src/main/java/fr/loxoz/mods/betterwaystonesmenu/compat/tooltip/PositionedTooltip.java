@@ -23,8 +23,8 @@ public class PositionedTooltip implements IPositionedTooltipProvider {
     }
 
     @Override
-    public List<Component> getTooltip() {
-        return target.getTooltip();
+    public List<Component> getTooltipComponents() {
+        return target.getTooltipComponents();
     }
 
     @Override

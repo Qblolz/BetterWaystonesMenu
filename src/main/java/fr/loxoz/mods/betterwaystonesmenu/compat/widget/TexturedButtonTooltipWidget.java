@@ -19,7 +19,7 @@ public class TexturedButtonTooltipWidget extends ImageButton implements IPositio
     }
 
     @Override
-    public List<Component> getTooltip() {
+    public List<Component> getTooltipComponents() {
         return List.of(getMessage());
     }
 }

@@ -1,6 +1,5 @@
 package fr.loxoz.mods.betterwaystonesmenu.gui.widget;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import fr.loxoz.mods.betterwaystonesmenu.compat.ScissorCompat;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.ITooltipProviderParent;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.PositionedTooltip;
@@ -9,8 +8,9 @@ import fr.loxoz.mods.betterwaystonesmenu.compat.widget.WidgetCompat;
 import fr.loxoz.mods.betterwaystonesmenu.util.Easing;
 import fr.loxoz.mods.betterwaystonesmenu.util.Easings;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Widget;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.AbstractContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class ScrollableContainerWidget extends AbstractContainerEventHandler implements WidgetCompat, Widget, NarratableEntry, ITooltipProviderParent {
+public class ScrollableContainerWidget extends AbstractContainerEventHandler implements WidgetCompat, Renderable, NarratableEntry, ITooltipProviderParent {
     // widget properties
     private final List<GuiEventListener> children = new ArrayList<>();
     private int width;
@@ -173,30 +173,30 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
     }
 
     // render
-    public void applyTranslate(@NotNull PoseStack matrices) {
-        matrices.translate(getX(), getY() - getScrollY(), 0);
+    public void applyTranslate(@NotNull GuiGraphics graphics) {
+        graphics.pose().translate(getX(), getY() - getScrollY(), 0);
     }
 
     public void enableContentScissor() {
         ScissorCompat.enableScissor(Minecraft.getInstance(), getX(), getY(), getInnerWidth(), getInnerHeight());
     }
 
-    public void renderBackground(@NotNull PoseStack matrices) {}
+    public void renderBackground(@NotNull GuiGraphics graphics) {}
 
-    public void renderContent(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
+    public void renderContent(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         // setup child mouse position
         int childMouseX = mouseX - getX();
         int childMouseY = (int) (mouseY - getY() + getScrollY());
         // render children with scissors
-        matrices.pushPose();
+        graphics.pose().pushPose();
         enableContentScissor();
-        applyTranslate(matrices);
+        applyTranslate(graphics);
         for (var child : children) {
-            if (!(child instanceof Widget drawable)) continue;
+            if (!(child instanceof Renderable drawable)) continue;
             int mx = childMouseX;
             int my = childMouseY;
             if (child instanceof AbstractWidget widget) {
-                int ey = getY() + widget.y;
+                int ey = getY() + widget.getY();
                 if (!isElementVisible(ey, ey + widget.getHeight())) {
                     // widget.visible = false;
                     continue;
@@ -207,18 +207,18 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
                     my = -1;
                 }
             }
-            drawable.render(matrices, mx, my, partialTicks);
+            drawable.render(graphics, mx, my, partialTicks);
         }
         ScissorCompat.disableScissor();
-        matrices.popPose();
+        graphics.pose().popPose();
     }
 
-    public void drawScrollbarBg(@NotNull PoseStack matrices) {
+    public void drawScrollbarBg(@NotNull GuiGraphics graphics) {
         if (!alwaysRenderBg && !isOverflowing()) return;
-        fill(matrices, getX() + getWidth() - getScrollbarWidth(), getY(), getX() + getWidth(), getY() + getHeight(), scrollbarBg);
+        graphics.fill(getX() + getWidth() - getScrollbarWidth(), getY(), getX() + getWidth(), getY() + getHeight(), scrollbarBg);
     }
 
-    public void drawScrollbarThumb(@NotNull PoseStack matrices) {
+    public void drawScrollbarThumb(@NotNull GuiGraphics graphics) {
         if (!isOverflowing()) return;
         int thumbHeight = getScrollbarThumbHeight();
         int x1 = getX() + getWidth() - getScrollbarWidth();
@@ -227,17 +227,17 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
         if ((y1 - getY()) > getMaxScrollY()) return; // do not render scrollbar if out of bounds
         int y2 = Math.min(y1 + thumbHeight, getY() + getHeight()); // limit max scrollbar height to bottom
         boolean hoveredOrDragged = scrollbarHovered || scrollbarYDragged;
-        fill(matrices, x1, y1, x2, y2, hoveredOrDragged ? 0xffa0a0a0 : 0xff808080);
-        fill(matrices, x1, y1, x2 - 1, y2 - 1, hoveredOrDragged ? 0xffe0e0e0 : 0xffC0C0C0);
+        graphics.fill(x1, y1, x2, y2, hoveredOrDragged ? 0xffa0a0a0 : 0xff808080);
+        graphics.fill(x1, y1, x2 - 1, y2 - 1, hoveredOrDragged ? 0xffe0e0e0 : 0xffC0C0C0);
     }
 
-    public void renderScrollbar(@NotNull PoseStack matrices) {
-        drawScrollbarBg(matrices);
-        drawScrollbarThumb(matrices);
+    public void renderScrollbar(@NotNull GuiGraphics graphics) {
+        drawScrollbarBg(graphics);
+        drawScrollbarThumb(graphics);
     }
 
     @Override
-    public void render(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
+    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         if (!isVisible()) {
             hovered = false;
             return;
@@ -245,9 +245,9 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
         hovered = isMouseInside(mouseX, mouseY);
         scrollbarHovered = isScrollbarAt(mouseX, mouseY);
         update();
-        renderBackground(matrices);
-        renderContent(matrices, mouseX, mouseY, partialTicks);
-        renderScrollbar(matrices);
+        renderBackground(graphics);
+        renderContent(graphics, mouseX, mouseY, partialTicks);
+        renderScrollbar(graphics);
     }
 
     // overridden events
@@ -351,7 +351,7 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
     }
 
     // focus auto scroll
-    @Override
+    /*@Override
     public boolean changeFocus(boolean lookForwards) {
         boolean bl = super.changeFocus(lookForwards);
         if (bl) {
@@ -364,10 +364,10 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
             }
         }
         return bl;
-    }
+    }*/
 
     public void scrollElementIntoView(AbstractWidget widget) {
-        scrollElementIntoView(widget.y, widget.getHeight());
+        scrollElementIntoView(widget.getY(), widget.getHeight());
     }
     public void scrollElementIntoView(int elementY, int elementHeight) {
         if (isElementFullyVisible(getY() + elementY, getY() + elementY + elementHeight)) return;
@@ -432,7 +432,7 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
         return ITooltipProviderParent.super.getTooltips(visible).stream()
                 .filter(tooltip -> {
                     if (!(tooltip.getTarget() instanceof AbstractWidget widget)) return true;
-                    return isElementVisible(getY() + widget.y, getY() + widget.y + widget.getHeight());
+                    return isElementVisible(getY() + widget.getY(), getY() + widget.getY() + widget.getHeight());
                 })
                 .collect(Collectors.toList());
     }

@@ -1,11 +1,12 @@
 package fr.loxoz.mods.betterwaystonesmenu.gui.screen;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import fr.loxoz.mods.betterwaystonesmenu.BetterWaystonesMenu;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.ITooltipProviderParent;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.PositionedTooltip;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.TooltipPos;
 import net.blay09.mods.waystones.menu.WaystoneSelectionMenu;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -27,24 +28,24 @@ public abstract class AbstractBetterWaystoneScreen extends AbstractContainerScre
         menuHeightScale = BetterWaystonesMenu.inst().config().menuHeightScale.get().floatValue();
     }
 
-    protected void renderChildrenTooltip(@NotNull PoseStack matrices, int mouseX, int mouseY) {
+    protected void renderChildrenTooltip(@NotNull GuiGraphics graphics, int mouseX, int mouseY) {
         for (var provider : getTooltips()) {
-            renderPositionedTooltip(provider, matrices, mouseX, mouseY);
+            renderPositionedTooltip(provider, graphics, mouseX, mouseY);
         }
     }
 
     protected BetterWaystonesMenu inst() { return BetterWaystonesMenu.inst(); }
 
-    protected void drawVersionInfo(PoseStack matrices) {
+    protected void drawVersionInfo(GuiGraphics guiGraphics) {
         var info = inst().getModInfo();
         if (info != null) {
-            drawString(matrices, font, String.format("%s v%s", info.getDisplayName(), info.getVersion()), 32, height - font.lineHeight - UI_GAP, 0x33ffffff);
+            guiGraphics.drawString(font, String.format("%s v%s", info.getDisplayName(), info.getVersion()), 32, height - font.lineHeight - UI_GAP, 0x33ffffff);
         }
     }
 
-    protected void renderPositionedTooltip(PositionedTooltip tooltip, PoseStack matrices, int mouseX, int mouseY) {
+    protected void renderPositionedTooltip(PositionedTooltip tooltip, GuiGraphics graphics, int mouseX, int mouseY) {
         TooltipPos pos = tooltip.getTooltipPos(mouseX, mouseY);
-        renderTooltip(matrices, tooltip.getTooltip(), Optional.empty(), pos.x(), pos.y());
+        graphics.renderTooltip(Minecraft.getInstance().font, tooltip.getTooltipComponents(), Optional.empty(), pos.x(), pos.y());
     }
 
     @Override
@@ -70,5 +71,5 @@ public abstract class AbstractBetterWaystoneScreen extends AbstractContainerScre
 
     // unused
     @Override
-    protected void renderBg(@NotNull PoseStack matrices, float delta, int mouseX, int mouseY) {}
+    protected void renderBg(GuiGraphics p_283065_, float p_97788_, int p_97789_, int p_97790_) {}
 }
