@@ -1,0 +1,40 @@
+name: Build Forge Mod
+
+on:
+  push:
+    branches:
+      - 1.20.1
+  pull_request:
+    branches:
+      - 1.20.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.gradle/caches
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Build the project
+      run: ./gradlew build
+
+    - name: Upload built jar
+      uses: actions/upload-artifact@v3
+      with:
+        name: better-waystones-menu
+        path: build/libs/*.jar
